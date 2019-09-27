@@ -1,0 +1,84 @@
+---
+title: "HELOC with xgb on caret"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(readr)
+library(caret)
+library(dplyr)
+library(mgcv)
+library(PRROC)
+
+
+auprcSummary <- function(data, lev = NULL, model = NULL){
+
+  index_class2 <- data$obs == "Y"
+  index_class1 <- data$obs == "N"
+
+  the_curve <- pr.curve(data$Y[index_class2],
+                        data$Y[index_class1],
+                        curve = FALSE)
+
+  out <- the_curve$auc.integral
+  names(out) <- "AUCPR"
+
+  out
+}
+
+
+datafile <- 'dfTrain.csv'
+
+df <- read_csv(datafile) %>% as.data.frame
+df$Class <- as.factor(ifelse(df$Class == 1, 'Y', 'N'))
+
+print(names(df))
+```
+```{r}
+library(Hmisc)
+
+print(dim(na.omit(df)))
+
+impute_df <- function(df, fun = median) {
+  for (f in colnames(df))
+    df[f] = impute(data.frame(df)[f], fun = median)
+  df
+}
+
+df <- impute_df(df)
+print(dim(na.omit(df)))
+```
+
+```{r}
+fitControl <- trainControl(method = "cv",
+                           number = 5,
+                           summaryFunction = auprcSummary,
+                           classProbs = TRUE,
+                           search = 'random')
+
+set.seed(42)
+
+system.time(
+  model <- train(Class~.,
+                 data = df,
+
+                 method = "xgbTree",
+                 nthread = 2,
+
+                 trControl = fitControl,
+                 verbose = TRUE,
+                 allowParallel = FALSE,
+                 tuneLength = 30,
+                 na.action = na.exclude)
+)
+
+model
+```
+```{r}
+model$results %>% arrange(desc(AUCPR)) %>% head(20)
+```
+

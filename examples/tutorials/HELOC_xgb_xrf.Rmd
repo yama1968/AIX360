@@ -1,0 +1,165 @@
+---
+title: "HELOC test with xgboost and xrf"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+```{r}
+library(readr)
+library(caret)
+library(dplyr)
+library(xgboost)
+library(xrf)
+library(PRROC)
+library(ROSE)
+```
+
+```{r}
+train <- read_csv("dfTrain.csv")
+test <- read_csv("dfTest.csv")
+
+X <- train %>% select(-Class)
+y <- train$Class
+
+prop <- 1 / mean(y)
+weights <- ifelse(y, prop, 1)
+
+n_folds = 3
+
+X_test <- test %>% select(-Class)
+y_test <- test$Class
+```
+```{r}
+library(caret)
+
+
+```
+
+```{r}
+xgb_control = list(max_depth = 3,
+                   objective = 'binary:logistic',
+                   eval_metric = 'aucpr',
+                   learning_rate = 0.2,
+                   subsample = 0.6,
+                   colsample_bytree = 0.7,
+                   gamma = 0.01,
+                   seed = 42)
+
+dtrain <- xgb.DMatrix(as.matrix(X), 
+                      label = y)
+dtest <- xgb.DMatrix(as.matrix(X_test), 
+                     label = y_test)
+
+
+rounds <- c(80, 80)
+
+xgb <- NULL
+
+set.seed(xgb_control$seed)
+
+for (depth in 1:length(rounds)) {
+  xgb_control$max_depth <- depth
+  print(xgb_control$max_depth)
+  if (is.null(xgb))
+    xgb <- xgb.train(xgb_control,
+                     dtrain,
+                     watchlist = list(train = dtrain, eval = dtest),
+                     nrounds = rounds[[depth]],
+                     print_every_n = 20)
+  else
+    xgb <- xgb.train(xgb_control,
+                     dtrain,
+                     xgb_model = xgb,
+                     watchlist = list(train = dtrain, eval = dtest),
+                     nrounds = rounds[[depth]],
+                     print_every_n = 20)
+}
+
+y_test_xgb <- predict(xgb, as.matrix(X_test), type = 'prob')
+pr_xgb <- pr.curve(y_test_xgb[y_test == 1], y_test_xgb[y_test == 0], curve = TRUE)
+pr_xgb # 0.78
+```
+```{r}
+library(Hmisc)
+
+print(dim(na.omit(train)))
+
+impute_df <- function(df, fun = median) {
+  for (f in colnames(df))
+    df[f] = impute(data.frame(df)[f], fun = median)
+  df
+}
+
+train <- impute_df(train)
+print(dim(na.omit(train)))
+
+test <- impute_df(test)
+```
+
+
+```{r}
+set.seed(37)
+
+glm_control <- list(type.measure = 'auc',
+                    nfolds = n_folds,
+                    pmax = 50)
+
+system.time({
+  clf <- xrf(Class ~ .,
+
+data = train,
+             prefit_xgb = xgb,
+             glm_control = glm_control,
+             family = 'binomial',
+             deoverlap = FALSE,
+             sparse = FALSE)
+})
+
+y_test_xrf <- predict(clf, test, type = 'response')
+pr_xrf <- pr.curve(y_test_xrf[y_test == 1], y_test_xrf[y_test == 0], curve = TRUE)
+pr_xrf # 0.77
+
+```
+
+```{r}
+knitr::kable(coef(clf) %>% filter(coefficient_lambda.min != 0))
+```
+
+## With less rules
+
+```{r}
+set.seed(37)
+
+glm_control <- list(type.measure = 'auc',
+                    nfolds = n_folds,
+                    pmax = 20)
+
+system.time({
+  clf <- xrf(Class ~ .,
+
+data = train,
+             prefit_xgb = xgb,
+             glm_control = glm_control,
+             family = 'binomial',
+             deoverlap = FALSE,
+             sparse = FALSE)
+})
+
+y_test_xrf <- predict(clf, test, type = 'response')
+pr_xrf <- pr.curve(y_test_xrf[y_test == 1], y_test_xrf[y_test == 0], curve = TRUE)
+pr_xrf # 0.76
+
+```
+
+```{r}
+knitr::kable(coef(clf) %>% filter(coefficient_lambda.min != 0))
+```
+```{r}
+coef(clf) %>% 
+  filter(coefficient_lambda.min != 0) %>%
+  write_delim(path = "./xrf_rules_20.csv", delim = ";")
+```
+

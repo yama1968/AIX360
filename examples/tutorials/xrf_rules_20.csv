@@ -1,0 +1,20 @@
+coefficient_lambda.min;term;rule
+-3.6902513210008743;(Intercept);NA
+-0.22937414977808057;r11_1;MSinceMostRecentInqexcl7days<0.5
+-0.21650247522210758;r116_4;ExternalRiskEstimate<74.5 & PercentTradesWBalance>=45.5
+-0.09012803337316741;r15_1;AverageMInFile<51.5
+-0.07330834672088633;r143_5;AverageMInFile<84.5 & PercentTradesWBalance>=85.5
+-0.04220617957708346;r157_3;MSinceMostRecentDelq<57.5 & MSinceOldestTradeOpen<97.5
+-0.041072637571679636;r71_1;NumSatisfactoryTrades<12.5
+-0.027454800731748778;r26_1;MSinceMostRecentInqexcl7days<1.5
+-0.018305039139780942;r112_3;ExternalRiskEstimate<74.5 & MSinceMostRecentDelq<34.5
+-0.013168716178400134;r10_1;MSinceOldestTradeOpen<142.5
+-0.004457147140937121;NetFractionRevolvingBurden;NA
+-0.004118948652702281;r107_5;MSinceMostRecentInqexcl7days< 0.5 & PercentInstallTrades>=37.5
+0.004159489492795505;NumSatisfactoryTrades;NA
+0.01839078884067521;r89_5;NetFractionRevolvingBurden<79.5 & PercentTradesNeverDelq>=77.5
+0.05195813834273697;ExternalRiskEstimate;NA
+0.07166048260422765;r95_6;ExternalRiskEstimate>=67.5 & MSinceMostRecentInqexcl7days>= 0.5
+0.14534445593187723;r138_6;ExternalRiskEstimate>=71.5 & MaxDelq2PublicRecLast12M>= 5.5
+0.14627858120366666;r92_6;AverageMInFile>=75.5 & NumSatisfactoryTrades>=17.5
+0.33553397551946773;r110_6;AverageMInFile>=59.5 & PercentTradesNeverDelq>=95.5
